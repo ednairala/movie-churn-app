@@ -1,0 +1,15 @@
+version: '3.8'
+
+services:
+  churn-predictor-api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: streaming_churn_predictor_container
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./data:/app/data    # maps local ./data into /app/data inside container
+    environment:
+      - PYTHONUNBUFFERED=1
+    restart: always
