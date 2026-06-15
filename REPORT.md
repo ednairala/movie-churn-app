@@ -76,11 +76,29 @@ Our notebook executed an integrated pipeline yielding the following empirical sy
 
 ## 3. Explaining Core Disagreements: Linear vs. Non-Linear Models
 
-The most fascinating mathematical insight surfaced in our matrix involves `customer_support_tickets`.
+### RFE Top 5 vs. Filter Top 5
 
-### The Divergence
+The Wrapper method (RFE using Logistic Regression) selected these top 5 features in order:
 
-The Filter method, a single Decision Tree, and the Random Forest ensemble completely ignored this feature (ranking it dead last at 8th place). However, the Wrapper method (Recursive Feature Elimination - RFE) prioritized it highly as the 3rd most critical feature in the entire system.
+1. `days_since_last_login`
+2. `monthly_watch_hours`
+3. `customer_support_tickets`
+4. `subscription_age_months`
+5. `preferred_content_imdb`
+
+By contrast, the Filter method (absolute Pearson correlation) ranked its top 5 as:
+
+1. `days_since_last_login`
+2. `monthly_watch_hours`
+3. `subscription_age_months`
+4. `preferred_content_imdb`
+5. `avg_completion_rate`
+
+The two methods agree on the first two slots — `days_since_last_login` and `monthly_watch_hours` are universally strong churn signals. The critical difference is that **RFE swaps `avg_completion_rate` for `customer_support_tickets`** at position 3/5. The Filter method ranks `customer_support_tickets` dead last (8th), while RFE elevates it to 3rd. This disagreement is analytically valuable because it reveals a fundamental limitation of filter-based ranking.
+
+### Why This Disagreement Matters
+
+The Filter method, a single Decision Tree, and the Random Forest ensemble completely ignored `customer_support_tickets` (ranking it 8th place). However, RFE prioritized it as the 3rd most critical feature.
 
 ### The Mathematical Explanation
 

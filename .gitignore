@@ -1,0 +1,26 @@
+# Python bytecode
+__pycache__/
+*.pyc
+*.pyo
+
+# Virtual environment
+venv/
+.venv/
+
+# Large data files (uncomment if CSV/data files become too large for git)
+# data/raw/*.csv
+# data/raw/*.json
+
+# Model artifacts (regenerate on startup if missing)
+# app/model.pkl
+
+# IDE settings
+.vscode/
+.idea/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Jupyter notebook checkpoints
+.ipynb_checkpoints/

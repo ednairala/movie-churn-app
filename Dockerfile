@@ -7,10 +7,8 @@ WORKDIR /app
 # Copy requirements FIRST (from its real location) to leverage Docker layer caching
 COPY requirements.txt .
 
-# Install dependencies. All pins ship cp311 manylinux wheels, so --only-binary
-# forces fast binary installs and avoids any source-compile hangs/freezes.
 RUN pip install --no-cache-dir --upgrade pip && \
-    pip install --no-cache-dir --only-binary=:all: -r requirements.txt
+    pip install --no-cache-dir -r requirements.txt
 
 # Copy production source (includes model.pkl, so no cold-start retrain in-container)
 COPY app/ ./app/
