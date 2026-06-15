@@ -1,56 +1,66 @@
 from fastapi import FastAPI
 from pydantic import BaseModel
-import numpy as np
+import pandas as pd
 from app.model import load_production_model
 
 app = FastAPI(title="VoD Streaming Customer Churn Predictor App")
 
-# Load the production random forest binary model on startup
+# Load the production Random Forest model ONCE at startup (not per request)
 model = load_production_model()
+
 
 class CustomerFeaturePayload(BaseModel):
     days_since_last_login: float
-    subscription_age_months: float
+    logins_per_week: float
     monthly_watch_hours: float
     customer_support_tickets: float
-    watchlist_size: float
+    watch_hours_per_month: float
+    ticket_burden: float
     avg_completion_rate: float
     preferred_content_imdb: float
-    preferred_content_meta: float
-    has_no_watchlist: int        # ← ADD THIS (binary: 0 or 1)
-    is_new_subscriber: int       # ← ADD THIS (binary: 0 or 1)
+    has_no_watchlist: int        # binary 0/1
+    is_new_subscriber: int       # binary 0/1
+
 
 @app.get("/health")
 def health_check():
     return {"status": "ok"}
 
+
+@app.get("/features")
+def expected_features():
+    """Documentation endpoint: the exact field order /predict expects."""
+    return {"expected_features": list(CustomerFeaturePayload.model_fields.keys())}
+
+
 @app.post("/predict")
 def predict_churn(payload: CustomerFeaturePayload):
-    # Construct structured matrix array input matching original dimensions
-    features_array = np.array([[
-        payload.days_since_last_login,
-        payload.subscription_age_months,
-        payload.monthly_watch_hours,
-        payload.customer_support_tickets,
-        payload.watchlist_size,
-        payload.avg_completion_rate,
-        payload.preferred_content_imdb,
-        payload.preferred_content_meta,
-        payload.has_no_watchlist,     # ← ADD THIS
-        payload.is_new_subscriber     # ← ADD THIS
-    ]])
-    
-    prediction = int(model.predict(features_array)[0])
-    probability = float(model.predict_proba(features_array)[0][1])
-    
-    # Match the retention strategy criteria from Step 7
-    if prediction == 1:
-        strategy = "Trigger Hyper-Personalized Movie Re-engagement Email Campaign"
+    # Single-row DataFrame whose columns match the model's training feature names
+    features_df = pd.DataFrame([{
+        "days_since_last_login": payload.days_since_last_login,
+        "logins_per_week": payload.logins_per_week,
+        "monthly_watch_hours": payload.monthly_watch_hours,
+        "customer_support_tickets": payload.customer_support_tickets,
+        "watch_hours_per_month": payload.watch_hours_per_month,
+        "ticket_burden": payload.ticket_burden,
+        "avg_completion_rate": payload.avg_completion_rate,
+        "preferred_content_imdb": payload.preferred_content_imdb,
+        "has_no_watchlist": payload.has_no_watchlist,
+        "is_new_subscriber": payload.is_new_subscriber,
+    }])
+
+    prediction = int(model.predict(features_df)[0])
+    probability = float(model.predict_proba(features_df)[0][1])
+
+    if probability >= 0.70:
+        strategy = "High risk: trigger hyper-personalized re-engagement email campaign"
+    elif probability >= 0.40:
+        strategy = "Medium risk: route to premium support queue to reduce friction"
     else:
-        strategy = "Maintain Standard Account Cycle"
-        
+        strategy = "Low risk: maintain standard account cycle"
+
     return {
         "churned": bool(prediction),
         "churn_probability": round(probability, 3),
-        "business_intervention_strategy": strategy
+        "business_intervention_strategy": strategy,
     }
