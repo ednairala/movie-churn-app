@@ -1,7 +1,7 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 import pandas as pd
-from app.model import load_production_model
+from app.model import load_production_model, get_user_by_id, generate_recommendations
 
 app = FastAPI(title="VoD Streaming Customer Churn Predictor App")
 
@@ -63,4 +63,41 @@ def predict_churn(payload: CustomerFeaturePayload):
         "churned": bool(prediction),
         "churn_probability": round(probability, 3),
         "business_intervention_strategy": strategy,
+    }
+
+
+FEATURE_KEYS = [
+    "days_since_last_login", "logins_per_week", "monthly_watch_hours",
+    "customer_support_tickets", "watch_hours_per_month", "ticket_burden",
+    "avg_completion_rate", "preferred_content_imdb",
+    "has_no_watchlist", "is_new_subscriber",
+]
+
+
+@app.get("/recommend/{user_id}")
+def recommend_for_user(user_id: int, n: int = 5):
+    user_data = get_user_by_id(user_id)
+    if user_data is None:
+        raise HTTPException(status_code=404, detail=f"User {user_id} not found")
+
+    row = pd.DataFrame([{k: user_data[k] for k in FEATURE_KEYS}])
+
+    probability = float(model.predict_proba(row)[0][1])
+
+    if probability < 0.5:
+        return {
+            "user_id": user_id,
+            "churn_probability": round(probability, 3),
+            "at_risk": False,
+            "message": "User is not at risk. No recommendations triggered.",
+            "recommendations": [],
+        }
+
+    recommendations = generate_recommendations(user_data, n=n)
+
+    return {
+        "user_id": user_id,
+        "churn_probability": round(probability, 3),
+        "at_risk": True,
+        "recommendations": recommendations,
     }

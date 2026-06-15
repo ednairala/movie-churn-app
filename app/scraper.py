@@ -1,4 +1,5 @@
 import os
+import time
 import requests
 import pandas as pd
 
@@ -19,7 +20,9 @@ def fetch_omdb_raw_data(api_key: str = "ch772b99") -> list:
             res = requests.get(base_url, params=params, timeout=5).json()
             if res.get("Response") == "True":
                 movie_pool.append(res)
+            time.sleep(0.5)
         except Exception:
+            time.sleep(0.5)
             continue
             
     if not movie_pool:

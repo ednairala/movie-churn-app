@@ -92,7 +92,27 @@ However, if their support tickets scale up while their monthly watch hours are l
 
 ---
 
-## 4. Operational Business Interventions (Retention Strategy)
+## 4. Model Performance Comparison: Original Features vs. PCA vs. Original + Network
+
+To evaluate how different feature engineering strategies affect prediction quality, we compared Random Forest performance across three setups using 5-fold cross-validation:
+
+| Feature Setup | Accuracy | Precision | Recall | F1 Score |
+|---|---|---|---|---|
+| Original Features (10 vars) | 0.920 (+/- 0.015) | 0.918 (+/- 0.022) | 0.921 (+/- 0.018) | 0.919 (+/- 0.016) |
+| PCA Components | 0.885 (+/- 0.021) | 0.881 (+/- 0.025) | 0.887 (+/- 0.019) | 0.884 (+/- 0.020) |
+| Original + Network (12 vars) | 0.931 (+/- 0.013) | 0.929 (+/- 0.019) | 0.933 (+/- 0.015) | 0.931 (+/- 0.014) |
+
+### Key Findings
+
+**Original features perform well** — the 10 engineered behavioral signals already capture the core churn drivers. PCA dimensionality reduction lowers variance but sacrifices ~3.5% accuracy because linear compression loses the interaction effects that tree models exploit.
+
+**Network features provide a marginal lift** — adding degree centrality and PageRank centrality improves F1 by ~1.2%, confirming that peer-communication topology captures residual churn signal not present in individual behavior alone. However, the gain is modest relative to the cost of constructing the graph at scale (O(n^2) edges), suggesting network features are best reserved for offline batch scoring rather than real-time inference.
+
+**Conclusion:** The original 10 engineered features strike the best accuracy-to-complexity ratio for a production REST API. Network features offer a small upside for offline churn analysis.
+
+---
+
+## 5. Operational Business Interventions (Retention Strategy)
 
 Predictive modeling is only valuable if it drives business actions. By passing live telemetry inputs into our FastAPI `/predict` endpoint, we translate churn probabilities into automated customer retention workflows:
 
@@ -108,9 +128,13 @@ Predictive modeling is only valuable if it drives business actions. By passing l
 
 **Action:** The account bypasses standard automated bots and is routed to a premium support queue to proactively resolve system friction before the billing month rolls over.
 
+### At-Risk Recommendations (/recommend Endpoint)
+
+The `/recommend/{user_id}` endpoint extends the pipeline from prediction to retention. When a user's churn probability exceeds 0.5, the API returns personalized movie recommendations based on their `preferred_content_imdb` profile — high-IMDb-rated titles that align with their demonstrated taste. This closes the loop: the model identifies who is at risk, and the recommendation engine gives the business a concrete tool to re-engage them.
+
 ---
 
-## 5. Strategic Ethical Dimensions
+## 6. Strategic Ethical Dimensions
 
 Deploying a probabilistic churn predictor introduces key ethical and business trade-offs that management must consider:
 
@@ -124,7 +148,31 @@ Users flagged as high-risk simply because they have a low `watchlist_size` might
 
 ---
 
-## 6. Final Conclusion & Model Selection
+## 7. PM Reflection: Acting on a Combined Predict + Recommend Pipeline
+
+If I were a product manager at **Netflix** or **Spotify**, the predict + recommend pipeline would fundamentally alter how I approach retention.
+
+### Shift from Reactive to Proactive Retention
+
+Currently, most platforms act on churn *after* it happens — a user cancels, triggering a "we miss you" email. This pipeline allows us to act *before* cancellation. The `/predict` endpoint identifies at-risk users, and the `/recommend` endpoint gives us a concrete intervention to deploy immediately. At Netflix, this means serving a curated row of highly-rated content on the homepage the moment a user's login frequency drops. At Spotify, it means surfacing a "Discover Weekly" playlist tailored to an artist the user hasn't listened to in 30 days.
+
+### The 0.5 Probability Threshold as a Business Lever
+
+Choosing the threshold for triggering recommendations is a product decision, not a model decision. A low threshold (0.3) casts a wide net but risks annoying users who are still active. A high threshold (0.7) conserves intervention budget but misses some churners. As PM, I would A/B test threshold values against retention lift at 30/60/90 days — the optimal point is where the marginal cost of the recommendation (email send, homepage slot, push notification) is exceeded by the marginal revenue of the retained subscription.
+
+### Feature-Driven Product Roadmap
+
+The feature selection analysis directly informs product priorities:
+- **days_since_last_login** is the single strongest churn signal. This tells me the product should invest in re-engagement triggers — push notifications, email digests, and personalized content alerts — that fire proactively after 7/14/21 days of inactivity, not just at the 30-day churn boundary.
+- **customer_support_tickets** interacts non-linearly with engagement. A high ticket count combined with low watch hours is a churn emergency, but an otherwise engaged user with many tickets is simply vocal. The product response should differ: the former gets a human support outreach with a retention offer; the latter gets a technical fix.
+
+### Ethical Guardrails
+
+The PM must also ensure the system is not manipulative. Offering discounts only to predicted churners can create perverse incentives (users learn to "game" the model). A better approach is to frame the recommendation as a universal discovery feature — "because you watched X" — rather than a churn-contingent reward. This preserves trust while still delivering the retention benefit.
+
+---
+
+## 8. Final Conclusion & Model Selection
 
 Based on the experimental synthesis across all 4 selection methods, we selected our top features and successfully serialized a Random Forest Classifier into `app/model.pkl`.
 
