@@ -5,7 +5,7 @@ FROM python:3.11-slim
 WORKDIR /app
 
 # Copy requirements FIRST (from its real location) to leverage Docker layer caching
-COPY app/requirements.txt .
+COPY requirements.txt .
 
 # Install dependencies. All pins ship cp311 manylinux wheels, so --only-binary
 # forces fast binary installs and avoids any source-compile hangs/freezes.
