@@ -2,7 +2,8 @@
 
 **Course:** Introduction to Data Science  
 **Instructor:** Prof. Yrupe Fresco  
-**Author:** iralai  
+**Author:** Edna Irala
+**ID:** 6217427  
 **Project:** Customer Churn Predictor App Framework
 
 ---
@@ -195,3 +196,7 @@ The PM must also ensure the system is not manipulative. Offering discounts only 
 Based on the experimental synthesis across all 4 selection methods, we selected our top features and successfully serialized a Random Forest Classifier into `app/model.pkl`.
 
 By containing this entire pipeline within `docker-compose`, we eliminate environment friction entirely. The system scales effortlessly, validates payloads strictly via Pydantic models, and delivers an end-to-end reproducible machine learning architecture ready for full production-grade deployment.
+
+## 9. Github Repository Link
+
+Link: https://github.com/ednairala/movie-churn-app.git
